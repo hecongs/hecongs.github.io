@@ -108,16 +108,6 @@ import Callout from '../../components/Callout.astro';
 <Callout type="warn" label="注意">正文</Callout>
 ```
 
-## 部署到 GitHub Pages
-
-线上地址 `https://hecongs.github.io/`，走 GitHub Actions 自动构建。
-
-三步：公开仓库 → 改 `astro.config.mjs` 的 `site`（用户主页仓库不设 `base`）→ push 到 `main`，再到 `Settings → Pages` 把 Source 选为 **GitHub Actions**。
-
-完整的排错手册、自定义域名流程是本机文件 `DEPLOY.md`，不随仓库发布。
-
-> ⚠️ 免费账号的 Pages 只支持公开仓库，**私有仓库需要 GitHub Pro**。公开仓库 = 源码公开，`draft: true` 的草稿不会进构建产物，但 `.md` 原文件在仓库里能被看到。真正不想让人读的内容，别提交进这个仓库。
-
 ## 首次使用清单
 
 - [ ] 改 `src/site.config.ts` 里的站名、简介、导航
@@ -133,15 +123,3 @@ import Callout from '../../components/Callout.astro';
 - Pagefind 的中文分词在索引期和查询期不一致，`src/pages/search.astro` 里已经加了单字 + 二元组对齐补丁；如果以后改了分词逻辑，记得两边一起改。
 - Shiki 内置语言里有 `c`、`cpp`、`asm`、`mipsasm`、`riscv`、`make`、`cmake`，**没有 `armasm`**，ARM 汇编请用 `asm`（高亮不完全准）。链接脚本 `.ld` 同样没有语法，用 `text` 或 `c` 兜底。
 - 不要把 `genhtml` 的完整覆盖率报告直接塞进仓库，它带源码且体积大；放 `public/reports/` 前先脱敏。
-
-## 设计
-
-版式是单栏、暖色卡片、胶囊导航。主栏宽 1040px。
-
-- 首页：名字、三行范围、三个计数。下面是目录，一次展开一节。关于我只留入口，工作经历点开才是整段，最近记录默认开着。
-- 学习专栏：带同一个 `series` 的笔记合成一条。阅读页 `/log/series/<id>/` 按 `order` 排，默认每节收起。
-- 文章页和素材页用文首 `title` 做标题。素材按 `category` 分组。
-
-关于页用 `AboutContent`，经历页和首页的「工作经历」用 `ExperienceContent`。首页的「关于我」不再展开整页介绍。改介绍和经历，改 `src/data/` 里对应的 TS 文件。
-
-## 首页背景（WebGL，默认关闭）
