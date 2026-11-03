@@ -48,7 +48,8 @@ const isActive = (href: string) => {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title data-title-key={titleKey}>{pageTitle}</title>
     <meta name="description" content={description} />
-    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href={url('favicon-32.png')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={url('favicon-180.png')} />
     <ClientRouter />
   </head>
   <body>
