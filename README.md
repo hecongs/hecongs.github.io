@@ -113,8 +113,6 @@ import Callout from '../../components/Callout.astro';
 - [ ] 改 `src/site.config.ts` 里的站名、简介、导航
 - [x] `src/data/profile.ts` 已按「何聪」的资料填好，改这里即可更新关于页
 - [x] `src/data/experience.ts` 已填入 4 段经历（含项目与技术栈），公司名与时间可直接编辑
-- [ ] 改 `astro.config.mjs` 的 `site`（和 `base`）
-- [ ] 删掉 `src/content/posts/spi-slave-dma-lost-byte.mdx` 等 5 个示例文件
 - [ ] `npm run build && npm run preview`，确认搜索能出结果
 
 ## 已知的坑
@@ -122,4 +120,3 @@ import Callout from '../../components/Callout.astro';
 - **搜索索引只存在于构建产物里**，`npm run dev` 下搜索页会提示索引不存在，这是正常的。
 - Pagefind 的中文分词在索引期和查询期不一致，`src/pages/search.astro` 里已经加了单字 + 二元组对齐补丁；如果以后改了分词逻辑，记得两边一起改。
 - Shiki 内置语言里有 `c`、`cpp`、`asm`、`mipsasm`、`riscv`、`make`、`cmake`，**没有 `armasm`**，ARM 汇编请用 `asm`（高亮不完全准）。链接脚本 `.ld` 同样没有语法，用 `text` 或 `c` 兜底。
-- 不要把 `genhtml` 的完整覆盖率报告直接塞进仓库，它带源码且体积大；放 `public/reports/` 前先脱敏。
