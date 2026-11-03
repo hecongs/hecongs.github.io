@@ -1,0 +1,63 @@
+---
+import { PROFILE } from '../data/profile';
+import { url } from '../lib/url';
+---
+
+<div class="profile">
+  <div class="profile-main">
+    <div class="profile-bio">
+      {PROFILE.bio.map((paragraph, index) => <p data-i18n={`profile.bio${index + 1}`}>{paragraph}</p>)}
+    </div>
+
+    <div class="chips">
+      {PROFILE.focus.map((item, index) => <span class="chip" data-i18n={`focus.${index}`}>{item}</span>)}
+    </div>
+
+    <section class="profile-block">
+      <h2 data-i18n="now.title">最近在做</h2>
+      <ul class="now-list">
+        {PROFILE.now.map((item, index) => <li data-i18n={`now.${index}`}>{item}</li>)}
+      </ul>
+    </section>
+
+    <section class="profile-block">
+      <h2 data-i18n="site.heading">这个站</h2>
+      <div class="profile-bio">
+        <p data-i18n="site.p1">
+          这里是个人介绍和工作记录。内容分三层：学习专栏记学习过程，文章把一个问题写透，素材是能直接复用的代码、命令和寄存器配置。
+        </p>
+        <p data-i18n="site.p2">
+          全站纯静态，内容就是 src/content/ 下的 Markdown，写完 git push 就会更新。新条目默认是草稿，只有显式标了 draft: false 才会出现在线上。
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <aside class="profile-aside">
+    <h2 data-i18n="aside.title">资料</h2>
+    <dl>
+      {
+        PROFILE.facts.map((fact, index) => {
+          const keys = ['fact.city', 'fact.field', 'fact.protocol', 'fact.toolchain'] as const;
+          const valueKey = index === 0 ? 'home.city' : index === 1 ? 'fact.fieldVal' : undefined;
+          return (
+            <div class="fact-row">
+              <dt data-i18n={keys[index]}>{fact.label}</dt>
+              <dd data-i18n={valueKey}>{fact.value}</dd>
+            </div>
+          );
+        })
+      }
+    </dl>
+    <div class="aside-links">
+      {
+        PROFILE.links.map((link) => (
+          <a href={link.href} rel="noopener">
+            {link.label}
+          </a>
+        ))
+      }
+      <a href={url('experience/')} data-i18n="aside.experience">工作经历 →</a>
+    </div>
+  </aside>
+</div>

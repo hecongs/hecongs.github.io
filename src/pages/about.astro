@@ -1,0 +1,18 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import AboutContent from '../components/AboutContent.astro';
+import { PROFILE } from '../data/profile';
+
+const name = PROFILE.name.trim();
+const description = `${name || '关于我'} · ${PROFILE.role}。${PROFILE.bio[0] ?? ''}`;
+---
+
+<BaseLayout title="关于" titleKey="page.about" description={description}>
+  <section class="hero">
+    <p class="count" data-i18n="about.kicker">关于 / about</p>
+    <h1 data-i18n="home.name">He Cong</h1>
+    <p class="page-lede" data-i18n="profile.roleLine">{PROFILE.role} · {PROFILE.tagline}</p>
+  </section>
+
+  <AboutContent />
+</BaseLayout>

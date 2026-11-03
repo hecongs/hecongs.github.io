@@ -1,0 +1,86 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Fold from '../../../components/Fold.astro';
+import { displayTitle, entryUrl, getVisible } from '../../../lib/content';
+import { seriesInfo } from '../../../lib/series';
+import { url } from '../../../lib/url';
+import { KIND } from '../../../site.config';
+
+export async function getStaticPaths() {
+  const entries = await getVisible('log');
+  const ids = [...new Set(entries.map((entry) => entry.data.series).filter((id): id is string => Boolean(id)))];
+  return ids.map((id) => ({ params: { series: id } }));
+}
+
+const series = Astro.params.series ?? '';
+const info = seriesInfo(series);
+const chapters = (await getVisible('log'))
+  .filter((entry) => entry.data.series === series)
+  .sort((a, b) => (a.data.order ?? 0) - (b.data.order ?? 0) || a.id.localeCompare(b.id));
+
+const rendered = await Promise.all(
+  chapters.map(async (entry, index) => {
+    const { Content } = await render(entry);
+    return { entry, Content, index };
+  }),
+);
+---
+
+<BaseLayout title={info.title} description={info.summary} narrow={true}>
+  <section class="hero">
+    <p class="kind-kicker" data-kind="log"><a href={url('log/')} data-i18n="kind.log">{KIND.log.label}</a></p>
+    <h1>{info.title}</h1>
+    <p>
+      {info.summary}
+      {' · '}
+      <span data-i18n="series.sections" data-i18n-vars={String(chapters.length)}>{chapters.length} 节</span>
+    </p>
+  </section>
+
+  <div class="series-read">
+    {
+      rendered.map(({ entry, Content, index }) => (
+        <Fold
+          id={entry.id}
+          extraClass="series-chapter"
+          index={String(index + 1).padStart(2, '0')}
+          title={displayTitle(entry)}
+          summary={entry.data.summary}
+          link={{ href: entryUrl('log', entry.id), label: '单独打开这一节', key: 'series.open' }}
+        >
+          <div class="prose">
+            <Content />
+          </div>
+        </Fold>
+      ))
+    }
+  </div>
+</BaseLayout>
+
+<script>
+  const openFromHash = () => {
+    const id = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!id) return;
+    const chapters = [...document.querySelectorAll<HTMLDetailsElement>('details.series-chapter')];
+    const target = chapters.find((chapter) => chapter.id === id);
+    if (!target) return;
+    target.open = true;
+    target.scrollIntoView({ block: 'start' });
+  };
+
+  document.addEventListener('astro:page-load', () => {
+    openFromHash();
+    document.querySelectorAll<HTMLDetailsElement>('details.series-chapter').forEach((chapter) => {
+      if (chapter.dataset.bound) return;
+      chapter.dataset.bound = '1';
+      chapter.addEventListener('toggle', () => {
+        if (!chapter.open) return;
+        const next = `#${chapter.id}`;
+        if (location.hash !== next) history.replaceState(null, '', next);
+      });
+    });
+  });
+
+  addEventListener('hashchange', openFromHash);
+</script>

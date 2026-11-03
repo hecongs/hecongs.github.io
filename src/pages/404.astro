@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { url } from '../lib/url';
+---
+
+<BaseLayout title="页面不存在" titleKey="page.missing" description="404">
+  <section class="hero">
+    <p class="count">404</p>
+    <h1 data-i18n="about.missing">这里什么都没有</h1>
+    <p class="page-lede" data-i18n="about.missingDesc">页面不存在，或者这条记录还没发布。</p>
+  </section>
+
+  <div class="panel" style="margin-top:16px">
+    <div class="actions" style="margin-top:0">
+      <a class="btn" href={url()} data-i18n="btn.home">回首页</a>
+      <a class="btn btn-ghost" href={url('search/')} data-i18n="btn.search">搜索一下</a>
+    </div>
+  </div>
+</BaseLayout>

@@ -1,0 +1,206 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EntryRow from '../components/EntryRow.astro';
+import Fold from '../components/Fold.astro';
+import ExperienceContent from '../components/ExperienceContent.astro';
+import { excerptOf, fmtDate, getVisible, readingTime, type EntryLike } from '../lib/content';
+import { studyUnits } from '../lib/series';
+import { type Kind } from '../site.config';
+import { PROFILE } from '../data/profile';
+import { JOBS } from '../data/experience';
+import { url } from '../lib/url';
+
+const [logEntries, posts, refs] = await Promise.all([
+  getVisible('log'),
+  getVisible('posts'),
+  getVisible('refs'),
+]);
+const logs = studyUnits(logEntries);
+const logSections = logEntries.length;
+
+type Item = { entry: EntryLike; kind: Kind };
+
+const all: Item[] = [
+  ...posts.map((entry) => ({ entry, kind: 'posts' as Kind })),
+  ...logs.map((entry) => ({ entry, kind: 'log' as Kind })),
+  ...refs.map((entry) => ({ entry, kind: 'refs' as Kind })),
+].sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf());
+
+const total = all.length;
+const featured = all.find((item) => item.kind === 'posts') ?? all[0] ?? null;
+const recent = all.filter((item) => item !== featured).slice(0, 6);
+const latest = all[0]?.entry.data.date ?? null;
+
+const companies = JOBS.map((job) => job.company.replace(/（.*?）/g, '')).join(' → ');
+const startYear = JOBS[0]?.period.slice(0, 4) ?? '';
+const span = startYear ? `${startYear}—至今` : '至今';
+---
+
+<BaseLayout titleKey="doc.home">
+  <section class="intro">
+    <div class="intro-head">
+      <div>
+        <p class="intro-kicker" data-i18n="home.role">{PROFILE.role}</p>
+        <h1 data-i18n="home.name">He Cong</h1>
+      </div>
+      <ul class="intro-stats">
+        <li>
+          <a href={url('log/')} data-kind="log"><span class="stat-n">{logSections}</span><span data-i18n="kind.log">学习专栏</span></a>
+        </li>
+        <li>
+          <a href={url('posts/')} data-kind="posts"><span class="stat-n">{posts.length}</span><span data-i18n="kind.posts">文章</span></a>
+        </li>
+        <li>
+          <a href={url('refs/')} data-kind="refs"><span class="stat-n">{refs.length}</span><span data-i18n="kind.refs">素材</span></a>
+        </li>
+      </ul>
+    </div>
+    <p class="hero-role" data-i18n="home.meta">成都 · 2022 年至今 · {PROFILE.tagline}</p>
+    <ul class="intro-scope">
+      <li><span data-i18n="home.scope.wireless">无线</span><span data-i18n="home.scope.wirelessBody">蓝牙音频芯片、BLE Mesh、ZigBee、Wi-Fi Dongle</span></li>
+      <li><span data-i18n="home.scope.prod">产测</span><span data-i18n="home.scope.prodBody">存储芯片 ATE / SLT，Pattern 执行与上位机</span></li>
+      <li><span data-i18n="home.scope.bench">台架</span><span data-i18n="home.scope.benchBody">Python、Jenkins，回归、报告与缺陷跟踪</span></li>
+    </ul>
+  </section>
+
+  <div class="home-col">
+    <div class="label-row fold-label">
+      <span class="label-pill" data-i18n="home.toc">目录</span>
+    </div>
+
+    <div class="fold-stack">
+    <Fold
+      id="about"
+      index="01"
+      title="关于我"
+      titleKey="home.about"
+      summary="音频芯片、无线模组、存储 ATE、Wi-Fi 台架"
+      summaryKey="home.aboutSummary"
+      meta={PROFILE.facts[0]?.value ?? ''}
+      metaKey="home.city"
+      link={{ href: url('about/'), label: '单独打开关于页', key: 'home.aboutLink' }}
+    >
+      <p class="fold-door" data-i18n="home.aboutDoor">完整介绍、正在做的事，以及这个站怎么组织，都写在关于页。</p>
+    </Fold>
+
+    <Fold
+      id="experience"
+      index="02"
+      title="工作经历"
+      titleKey="home.experience"
+      summary={companies}
+      meta={`${JOBS.length} 段 · ${span}`}
+      metaKey="home.expMeta"
+      metaVars={String(JOBS.length)}
+      link={{ href: url('experience/'), label: '完整时间线', key: 'home.experienceLink' }}
+    >
+      <ExperienceContent />
+    </Fold>
+
+    <Fold
+      id="writing"
+      index="03"
+      title="最近记录"
+      titleKey="home.recent"
+      open={true}
+      meta={latest ? `最后 ${fmtDate(latest)}` : '暂无'}
+      metaKey={latest ? 'home.updated' : 'home.none'}
+      metaVars={latest ? fmtDate(latest) : undefined}
+      link={{ href: url('log/'), label: '全部', key: 'home.all', count: total }}
+    >
+      <span slot="summary">
+        <span data-i18n="kind.log">学习专栏</span> {logSections}
+        {' · '}
+        <span data-i18n="kind.posts">文章</span> {posts.length}
+        {' · '}
+        <span data-i18n="kind.refs">素材</span> {refs.length}
+      </span>
+      {
+        featured && (
+          <a class="featured" href={url(`${featured.kind}/${featured.entry.id}/`)}>
+            <span class="featured-kicker">
+              <span data-i18n={featured.kind === 'posts' ? 'home.latestPost' : 'home.latestNote'}>
+                {featured.kind === 'posts' ? '最新文章' : '最新记录'}
+              </span>
+              {' · '}
+              {readingTime(featured.entry)} <span data-i18n="unit.min">分钟</span>
+            </span>
+            <h2>{featured.entry.data.title ?? excerptOf(featured.entry, 40)}</h2>
+            <p class="featured-excerpt">{excerptOf(featured.entry, 108)}</p>
+            <span class="featured-foot">
+              <time datetime={featured.entry.data.date.toISOString().slice(0, 10)}>
+                {fmtDate(featured.entry.data.date)}
+              </time>
+              {featured.entry.data.tags.slice(0, 3).map((tag) => <span class="tag">#{tag}</span>)}
+              <span class="featured-arrow" aria-hidden="true">→</span>
+            </span>
+          </a>
+        )
+      }
+
+      {
+        recent.length > 0 ? (
+          <ul class="feed fold-feed">
+            {recent.map((item) => (
+              <EntryRow entry={item.entry} kind={item.kind} showKind />
+            ))}
+          </ul>
+        ) : (
+          <p class="empty" data-i18n="home.empty">还没有内容。在 src/content 下新建 Markdown 即可开始。</p>
+        )
+      }
+    </Fold>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const HEADER_OFFSET = 92;
+  let suppressHash = false;
+
+  // scroll-margin-top 在 CSS 里设为 92px，这里交给浏览器算，避免和原生锚点跳转打架
+  const scrollTo = (el: HTMLElement, behavior: ScrollBehavior = 'smooth') => {
+    el.scrollIntoView({ behavior, block: 'start' });
+  };
+
+  const foldsNow = () => Array.from(document.querySelectorAll<HTMLDetailsElement>('details[data-fold]'));
+
+  const openById = (id: string, behavior: ScrollBehavior) => {
+    const fold = document.getElementById(id);
+    if (!(fold instanceof HTMLDetailsElement) || fold.dataset.fold === undefined) return false;
+    fold.open = true;
+    scrollTo(fold, behavior);
+    return true;
+  };
+
+  const fromHash = () => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (id) openById(id, 'auto');
+  };
+
+  // 视图过渡之后脚本不会重跑，折叠目录每次进入首页都要重新绑
+  const bindFolds = () => {
+    const folds = foldsNow();
+    if (!folds.length || folds[0]?.dataset.bound === '1') return;
+    folds.forEach((fold) => {
+      fold.dataset.bound = '1';
+    });
+
+    folds.forEach((fold) => {
+      fold.addEventListener('toggle', () => {
+        if (suppressHash) return;
+        if (fold.open) {
+          history.replaceState(null, '', `#${fold.id}`);
+          if (fold.getBoundingClientRect().top < HEADER_OFFSET) scrollTo(fold);
+        } else if (location.hash === `#${fold.id}`) {
+          history.replaceState(null, '', location.pathname + location.search);
+        }
+      });
+    });
+
+    fromHash();
+  };
+
+  addEventListener('hashchange', fromHash);
+  document.addEventListener('astro:page-load', bindFolds);
+</script>

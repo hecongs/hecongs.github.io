@@ -1,0 +1,126 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import TagList from '../components/TagList.astro';
+import { KIND } from '../site.config';
+import {
+  displayTitle,
+  entryUrl,
+  fmtDate,
+  iso,
+  readingTime,
+  type EntryLike,
+} from '../lib/content';
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  entry: EntryLike;
+  kind: 'log' | 'posts' | 'refs';
+  headings?: Heading[];
+  prev?: EntryLike | null;
+  next?: EntryLike | null;
+  /** refs 用来显示分组 */
+  category?: string;
+  /** 这一篇属于哪一套学习笔记 */
+  series?: { href: string; title: string } | null;
+}
+
+const { entry, kind, headings = [], prev = null, next = null, category, series = null } = Astro.props;
+const meta = KIND[kind];
+const title = displayTitle(entry);
+const isDraft = entry.data.draft !== false;
+const toc = headings.filter((heading) => heading.depth === 2 || heading.depth === 3);
+const showToc = toc.length >= 2;
+---
+
+<BaseLayout title={title} description={entry.data.summary ?? title} indexable={true} narrow={true}>
+  <div class="read-progress" aria-hidden="true"><span></span></div>
+
+  <article class="sheet">
+    <header class="entry-head">
+      <div class="entry-meta" data-pagefind-ignore>
+        <span data-i18n={`kind.${kind}`}>{meta.label}</span>
+        {series && <a href={series.href}>{series.title}</a>}
+        <time datetime={iso(entry.data.date)}>{fmtDate(entry.data.date)}</time>
+        <span>{readingTime(entry)} <span data-i18n="unit.min">分钟</span></span>
+        {
+          entry.data.updated && (
+            <span><span data-i18n="entry.updated">更新于</span> {fmtDate(entry.data.updated)}</span>
+          )
+        }
+        {category && <span>{category}</span>}
+        {entry.data.project && <span>{entry.data.project}</span>}
+        {isDraft && <span class="badge badge-draft" data-i18n="badge.draft">草稿</span>}
+      </div>
+      <h1 data-pagefind-meta="title">{title}</h1>
+      <div data-pagefind-ignore>
+        <TagList tags={entry.data.tags} />
+      </div>
+    </header>
+
+    {
+      showToc && (
+        <nav class="toc">
+          <p data-i18n="entry.toc">本页目录</p>
+          <ul>
+            {toc.map((heading) => (
+              <li style={heading.depth === 3 ? 'margin-left:14px' : ''}>
+                <a href={`#${heading.slug}`}>{heading.text}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )
+    }
+
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+
+  <nav class="pager" data-pagefind-ignore>
+    <span>
+      {
+        prev && (
+          <a href={entryUrl(kind, prev.id)}>
+            <span class="dir" data-i18n="entry.prev">← 上一篇</span>
+            <span class="pager-title">{displayTitle(prev)}</span>
+          </a>
+        )
+      }
+    </span>
+    <span>
+      {
+        next && (
+          <a href={entryUrl(kind, next.id)}>
+            <span class="dir" data-i18n="entry.next">下一篇 →</span>
+            <span class="pager-title">{displayTitle(next)}</span>
+          </a>
+        )
+      }
+    </span>
+  </nav>
+</BaseLayout>
+
+<script>
+  let bar: HTMLElement | null = null;
+
+  const updateProgress = () => {
+    if (!bar?.isConnected) return;
+    const root = document.documentElement;
+    const max = root.scrollHeight - root.clientHeight;
+    const ratio = max > 0 ? Math.min(1, root.scrollTop / max) : 0;
+    bar.style.transform = `scaleX(${ratio})`;
+  };
+
+  document.addEventListener('astro:page-load', () => {
+    bar = document.querySelector('.read-progress span');
+    updateProgress();
+  });
+  addEventListener('scroll', updateProgress, { passive: true });
+  addEventListener('resize', updateProgress);
+</script>

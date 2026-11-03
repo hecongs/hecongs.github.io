@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
+import { getVisible, groupByYear } from '../../lib/content';
+import { KIND } from '../../site.config';
+
+const entries = await getVisible('posts');
+const groups = groupByYear(entries);
+---
+
+<BaseLayout title={KIND.posts.label} titleKey="nav.posts" description={KIND.posts.desc}>
+  <section class="hero">
+    <p class="kind-kicker" data-kind="posts" data-i18n="kind.posts">{KIND.posts.label}</p>
+    <h1 data-i18n="kind.posts">{KIND.posts.label}</h1>
+    <p>
+      <span data-i18n="kind.postsDesc">{KIND.posts.desc}</span>
+      {' · '}
+      <span data-i18n="list.countPiece" data-i18n-vars={String(entries.length)}>共 {entries.length} 篇</span>
+    </p>
+  </section>
+
+  {
+    entries.length === 0 && <p class="empty" data-i18n="empty.posts">还没有文章。</p>
+  }
+
+  {
+    groups.map(([year, items]) => (
+      <section>
+        <h2 class="group-title">{year}</h2>
+        <ul class="feed">
+          {items.map((entry) => (
+            <EntryRow entry={entry} kind="posts" />
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</BaseLayout>

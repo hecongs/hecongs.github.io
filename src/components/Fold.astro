@@ -1,0 +1,82 @@
+---
+/**
+ * 可折叠区块：首页用「默认收起 + 点击展开」的形式承载关于 / 经历 / 记录。
+ * 基于原生 <details>，无脚本也能用；带上 id，可直接用 /#about 这样的链接打开。
+ */
+interface Props {
+  id: string;
+  index: string;
+  title: string;
+  titleKey?: string;
+  summary?: string;
+  summaryKey?: string;
+  meta?: string;
+  metaKey?: string;
+  /** 替换文案里的 {n}，显示仍用 meta 作为中文原文 */
+  metaVars?: string;
+  /** 展开后底部的「完整页面 →」链接 */
+  link?: { href: string; label: string; key?: string; count?: number };
+  open?: boolean;
+  extraClass?: string;
+}
+
+const { id, index, title, titleKey, summary, summaryKey, meta, metaKey, metaVars, link, open = false, extraClass } = Astro.props;
+const summarySlot = Astro.slots.has('summary');
+const hasSummary = Boolean(summary) || summarySlot;
+---
+
+<details class:list={['fold', extraClass]} id={id} data-fold open={open}>
+  <summary class="fold-head">
+    <span class="fold-index">{index}</span>
+    <span class="fold-text">
+      <span class="fold-title" data-i18n={titleKey}>{title}</span>
+      {
+        hasSummary && (
+          <span class="fold-summary" data-i18n={summarySlot ? undefined : summaryKey}>
+            {summarySlot ? <slot name="summary" /> : summary}
+          </span>
+        )
+      }
+    </span>
+    {
+      meta && (
+        <span class="fold-meta" data-i18n={metaKey} data-i18n-vars={metaVars}>{meta}</span>
+      )
+    }
+    <span class="fold-caret" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+        <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </span>
+  </summary>
+
+  <div class="fold-body">
+    <div class="fold-inner">
+      <slot />
+    </div>
+    {
+      link && (
+        <div class="fold-foot">
+          <a href={link.href}>
+            {
+              link.key ? (
+                <>
+                  <span data-i18n={link.key}>{link.label}</span>
+                  {link.count != null && (
+                    <>
+                      {' '}
+                      {link.count} <span data-i18n="unit.item">条</span>
+                    </>
+                  )}
+                </>
+              ) : (
+                link.label
+              )
+            }
+            <span aria-hidden="true">→</span>
+          </a>
+        </div>
+      )
+    }
+  </div>
+</details>

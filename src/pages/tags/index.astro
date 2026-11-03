@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { countTags, getVisible } from '../../lib/content';
+import { url } from '../../lib/url';
+
+const [logs, posts, refs] = await Promise.all([
+  getVisible('log'),
+  getVisible('posts'),
+  getVisible('refs'),
+]);
+
+const tags = countTags([...logs, ...posts, ...refs]);
+---
+
+<BaseLayout title="标签" titleKey="page.tags" description="全部标签">
+  <section class="hero">
+    <p class="count" data-i18n="tags.all">全部标签</p>
+    <h1 data-i18n="page.tags">标签</h1>
+    <p data-i18n="tags.count" data-i18n-vars={String(tags.length)}>共 {tags.length} 个标签，按使用次数排序。</p>
+  </section>
+
+  <div class="panel" style="margin-top:16px">
+    <div class="tags" style="gap:8px">
+      {
+        tags.map((item) => (
+          <a class="tag" href={url(`tags/${encodeURIComponent(item.tag)}/`)}>
+            #{item.tag}
+            <span style="opacity:0.55">{item.count}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  {tags.length === 0 && <p class="empty" data-i18n="empty.tags">还没有标签。</p>}
+</BaseLayout>

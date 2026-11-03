@@ -1,0 +1,94 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
+import Fold from '../../components/Fold.astro';
+import { displayTitle, entryUrl, fmtMonth, getVisible } from '../../lib/content';
+import { groupStudy, groupStudyByMonth, seriesInfo, seriesUrl } from '../../lib/series';
+import { KIND } from '../../site.config';
+
+const entries = await getVisible('log');
+const items = groupStudy(entries);
+const groups = groupStudyByMonth(items);
+
+const blocksOf = (rows: typeof items) => {
+  const blocks: Array<
+    | { type: 'notes'; entries: Extract<(typeof rows)[number], { type: 'note' }>['entry'][] }
+    | Extract<(typeof rows)[number], { type: 'series' }>
+  > = [];
+  let notes: Extract<(typeof rows)[number], { type: 'note' }>['entry'][] = [];
+  const flush = () => {
+    if (notes.length === 0) return;
+    blocks.push({ type: 'notes', entries: notes });
+    notes = [];
+  };
+  for (const row of rows) {
+    if (row.type === 'note') notes.push(row.entry);
+    else {
+      flush();
+      blocks.push(row);
+    }
+  }
+  flush();
+  return blocks;
+};
+---
+
+<BaseLayout title={KIND.log.label} titleKey="nav.log" description={KIND.log.desc}>
+  <section class="hero">
+    <p class="kind-kicker" data-kind="log" data-i18n="kind.log">{KIND.log.label}</p>
+    <h1 data-i18n="kind.log">{KIND.log.label}</h1>
+    <p>
+      <span data-i18n="kind.logDesc">{KIND.log.desc}</span>
+      {' · '}
+      <span data-i18n="list.countItem" data-i18n-vars={String(items.length)}>共 {items.length} 条</span>
+    </p>
+  </section>
+
+  {
+    items.length === 0 && <p class="empty" data-i18n="empty.log">还没有学习记录。</p>
+  }
+
+  {
+    groups.map(([, rows]) => (
+      <section>
+        <h2 class="group-title">{fmtMonth(rows[0]!.date)}</h2>
+        {blocksOf(rows).map((block, index) =>
+          block.type === 'notes' ? (
+            <ul class="feed log-block">
+              {block.entries.map((entry) => (
+                <EntryRow entry={entry} kind="log" />
+              ))}
+            </ul>
+          ) : (
+            <div class="log-block">
+              <Fold
+                id={`series-${block.id}`}
+                index={String(index + 1).padStart(2, '0')}
+                title={seriesInfo(block.id).title}
+                summary={seriesInfo(block.id).summary}
+                meta={`${block.entries.length} 节`}
+                metaKey="series.sections"
+                metaVars={String(block.entries.length)}
+                link={{ href: seriesUrl(block.id), label: '按顺序展开阅读', key: 'series.read' }}
+              >
+                <ol class="series-list">
+                  {block.entries.map((entry, chapter) => (
+                    <li>
+                      <a href={entryUrl('log', entry.id)}>
+                        <span class="series-no">{String(chapter + 1).padStart(2, '0')}</span>
+                        <span>
+                          <strong>{displayTitle(entry)}</strong>
+                          {entry.data.summary && <span class="series-sum">{entry.data.summary}</span>}
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ol>
+              </Fold>
+            </div>
+          ),
+        )}
+      </section>
+    ))
+  }
+</BaseLayout>

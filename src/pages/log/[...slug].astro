@@ -1,0 +1,29 @@
+---
+import { render } from 'astro:content';
+import EntryLayout from '../../layouts/EntryLayout.astro';
+import { getVisible } from '../../lib/content';
+import { seriesNeighbors } from '../../lib/series';
+
+export async function getStaticPaths() {
+  const entries = await getVisible('log');
+  return entries.map((entry) => {
+    const neighbors = seriesNeighbors(entries, entry);
+    return {
+      params: { slug: entry.id },
+      props: {
+        entry,
+        prev: neighbors.prev,
+        next: neighbors.next,
+        series: neighbors.series,
+      },
+    };
+  });
+}
+
+const { entry, prev, next, series } = Astro.props;
+const { Content, headings } = await render(entry);
+---
+
+<EntryLayout entry={entry} kind="log" headings={headings} prev={prev} next={next} series={series}>
+  <Content />
+</EntryLayout>

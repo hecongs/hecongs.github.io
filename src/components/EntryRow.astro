@@ -1,0 +1,40 @@
+---
+import { displayTitle, entryUrl, excerptOf, fmtDate, iso, type EntryLike } from '../lib/content';
+import { KIND, type Kind } from '../site.config';
+
+interface Props {
+  entry: EntryLike;
+  kind: Kind;
+  showSummary?: boolean;
+  /** 混合列表才标来源；日志 / 文章 / 素材页本身已经说明栏目 */
+  showKind?: boolean;
+}
+
+const { entry, kind, showSummary = true, showKind = false } = Astro.props;
+const isDraft = entry.data.draft !== false;
+const title = displayTitle(entry);
+const excerpt = showSummary ? excerptOf(entry, 72) : '';
+
+const compact = (value: string) => value.replace(/…$/u, '').replace(/\s+/g, '');
+const titleKey = compact(title);
+const excerptKey = compact(excerpt);
+const overlap = Math.min(24, titleKey.length, excerptKey.length);
+const text =
+  overlap > 0 &&
+  !excerptKey.startsWith(titleKey.slice(0, overlap)) &&
+  !titleKey.startsWith(excerptKey.slice(0, overlap))
+    ? excerpt
+    : '';
+---
+
+<li class="feed-row">
+  <div>
+    {showKind && <span class="feed-kind" data-kind={kind} data-i18n={`kind.${kind}`}>{KIND[kind].label}</span>}
+    <div class="feed-title">
+      <a href={entryUrl(kind, entry.id)}>{title}</a>
+      {isDraft && <span class="badge badge-draft" data-i18n="badge.draft">草稿</span>}
+    </div>
+    {text && <p class="feed-summary">{text}</p>}
+  </div>
+  <time class="feed-date" datetime={iso(entry.data.date)}>{fmtDate(entry.data.date)}</time>
+</li>

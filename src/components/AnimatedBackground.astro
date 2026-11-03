@@ -1,0 +1,283 @@
+---
+/**
+ * 首页背景：WebGL 片元着色器实时渲染。
+ * - 域扭曲的 fbm 噪声生成连续的淡紫/青/桃色场，自然漂移
+ * - 指针作为“光源 + 推力”：光标附近颜色场被推开、并被提亮
+ * - 逐像素颗粒，避免大面积渐变色带
+ * - 不支持 WebGL / 编译失败时，自动退回下面的纯 CSS 光晕（渐进增强）
+ */
+---
+
+<div class="ambient" id="ambient" aria-hidden="true">
+  <canvas class="ambient-canvas" id="ambient-canvas"></canvas>
+
+  <div class="ambient-parallax">
+    <div class="ambient-blob blob-a"></div>
+    <div class="ambient-blob blob-b"></div>
+    <div class="ambient-blob blob-c"></div>
+  </div>
+  <div class="ambient-spot"></div>
+  <div class="ambient-grid"></div>
+  <div class="ambient-grain"></div>
+</div>
+
+<script>
+  const VERT = `
+    attribute vec2 aPos;
+    varying vec2 vUv;
+    void main() {
+      vUv = aPos * 0.5 + 0.5;
+      gl_Position = vec4(aPos, 0.0, 1.0);
+    }
+  `;
+
+  const FRAG = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+
+    varying vec2 vUv;
+    uniform vec2  uRes;
+    uniform float uTime;
+    uniform vec2  uPointer;
+    uniform float uHover;
+    uniform float uSpeed;
+    uniform float uDark;
+
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+    }
+
+    float vnoise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      float a = hash(i);
+      float b = hash(i + vec2(1.0, 0.0));
+      float c = hash(i + vec2(0.0, 1.0));
+      float d = hash(i + vec2(1.0, 1.0));
+      return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0;
+      float amp = 0.5;
+      for (int i = 0; i < 3; i++) {
+        v += amp * vnoise(p);
+        p *= 2.03;
+        amp *= 0.5;
+      }
+      return v;
+    }
+
+    void main() {
+      float aspect = uRes.x / max(uRes.y, 1.0);
+      vec2 p = (vUv - 0.5) * vec2(aspect, 1.0);
+      vec2 mp = (uPointer - 0.5) * vec2(aspect, 1.0);
+
+      // 指针推力：越靠近光标，颜色场被推得越明显
+      vec2 delta = p - mp;
+      float dist = length(delta);
+      vec2 dir = delta / (dist + 0.001);
+      float influence = uHover * exp(-dist * dist * 5.0);
+      vec2 warp = dir * influence * (0.12 + uSpeed * 0.22);
+
+      float t = uTime * 0.026;
+      vec2 q = p * 1.35 + warp;
+
+      float n1 = fbm(q + vec2(t, -t * 0.62));
+      float n2 = fbm(q * 1.7 + vec2(-t * 0.81, t * 0.47) + n1 * 0.55);
+      float n3 = fbm(q * 2.4 + vec2(t * 0.39, t * 0.91) + n2 * 0.45);
+
+      vec3 base = mix(vec3(0.980, 0.973, 0.953), vec3(0.075, 0.075, 0.067), uDark);
+      vec3 c1 = mix(vec3(0.737, 0.690, 0.965), vec3(0.34, 0.29, 0.52), uDark);
+      vec3 c2 = mix(vec3(0.659, 0.808, 0.847), vec3(0.26, 0.40, 0.43), uDark);
+      vec3 c3 = mix(vec3(0.965, 0.800, 0.694), vec3(0.48, 0.33, 0.26), uDark);
+
+      float a1 = smoothstep(0.22, 0.78, n1) * 0.64;
+      float a2 = smoothstep(0.28, 0.84, n2) * 0.54;
+      float a3 = smoothstep(0.30, 0.86, n3) * 0.52;
+
+      vec3 col = mix(base, c1, a1);
+      col = mix(col, c2, a2);
+      col = mix(col, c3, a3);
+
+      // 光标附近的柔和提亮，模拟一层光
+      vec3 glow = mix(vec3(0.07, 0.062, 0.05), vec3(0.05), uDark);
+      col += glow * influence;
+
+      // 光标外围的柔和光环，让“被推开”这件事一眼可辨
+      float ring = exp(-pow((dist - 0.16) * 7.0, 2.0)) * uHover * (0.85 + uSpeed * 0.9);
+      col += mix(vec3(0.05, 0.045, 0.055), vec3(0.035), uDark) * ring;
+      col -= influence * mix(0.025, 0.012, uDark);
+
+      // 颗粒
+      float g = hash(gl_FragCoord.xy + fract(uTime) * 120.0);
+      col += (g - 0.5) * 0.014;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.warn('[ambient] shader compile failed:', gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+
+  function initAmbient(): void {
+    const layer = document.getElementById('ambient');
+    const canvas = document.getElementById('ambient-canvas') as HTMLCanvasElement | null;
+    if (!layer || !canvas) return;
+
+    const gl = canvas.getContext('webgl', {
+      alpha: false,
+      antialias: false,
+      depth: false,
+      stencil: false,
+      powerPreference: 'low-power',
+    }) as WebGLRenderingContext | null;
+
+    if (!gl) return;
+
+    const vert = compile(gl, gl.VERTEX_SHADER, VERT);
+    const frag = compile(gl, gl.FRAGMENT_SHADER, FRAG);
+    if (!vert || !frag) {
+      canvas.remove();
+      return;
+    }
+
+    const program = gl.createProgram();
+    if (!program) return;
+    gl.attachShader(program, vert);
+    gl.attachShader(program, frag);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      canvas.remove();
+      return;
+    }
+    gl.useProgram(program);
+
+    const buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(program, 'aPos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uRes = gl.getUniformLocation(program, 'uRes');
+    const uTime = gl.getUniformLocation(program, 'uTime');
+    const uPointer = gl.getUniformLocation(program, 'uPointer');
+    const uHover = gl.getUniformLocation(program, 'uHover');
+    const uSpeed = gl.getUniformLocation(program, 'uSpeed');
+    const uDark = gl.getUniformLocation(program, 'uDark');
+
+    const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const reduceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let dark = darkQuery.matches ? 1 : 0;
+
+    // 背景是柔和的，没必要按满分辨率渲染
+    const scale = Math.min(window.devicePixelRatio || 1, 1.5) * 0.75;
+
+    let width = 0;
+    let height = 0;
+
+    function resize(): void {
+      const w = Math.max(1, Math.floor(window.innerWidth * scale));
+      const h = Math.max(1, Math.floor(window.innerHeight * scale));
+      if (w === width && h === height) return;
+      width = w;
+      height = h;
+      canvas!.width = w;
+      canvas!.height = h;
+      gl!.viewport(0, 0, w, h);
+      gl!.uniform2f(uRes, w, h);
+    }
+
+    // 指针平滑跟随
+    let targetX = 0.5;
+    let targetY = 0.45;
+    let pointerX = targetX;
+    let pointerY = targetY;
+    let targetSpeed = 0;
+    let speed = 0;
+    let prevX = targetX;
+    let prevY = targetY;
+    let targetHover = 0;
+    let hover = 0;
+    let hasMoved = false;
+
+    window.addEventListener(
+      'pointermove',
+      (event: PointerEvent) => {
+        const nx = event.clientX / Math.max(window.innerWidth, 1);
+        const ny = 1 - event.clientY / Math.max(window.innerHeight, 1);
+        targetSpeed = Math.min(1, Math.hypot(nx - prevX, ny - prevY) * 14);
+        prevX = nx;
+        prevY = ny;
+        targetX = nx;
+        targetY = ny;
+        if (!hasMoved) {
+          hasMoved = true;
+          layer.classList.add('is-live');
+        }
+        targetHover = 1;
+      },
+      { passive: true },
+    );
+
+    darkQuery.addEventListener('change', (event) => {
+      dark = event.matches ? 1 : 0;
+    });
+
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    layer.classList.add('has-webgl');
+
+    // 上下文丢失（切换显卡、内存紧张）时退回纯 CSS 背景，避免白屏
+    canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      layer.classList.remove('has-webgl');
+      canvas.remove();
+    });
+
+    const start = performance.now();
+    let last = 0;
+
+    function frame(now: number): void {
+      requestAnimationFrame(frame);
+      // 30fps 足够，省一半 GPU
+      if (now - last < 1000 / 30) return;
+      last = now;
+
+      pointerX += (targetX - pointerX) * 0.14;
+      pointerY += (targetY - pointerY) * 0.14;
+      hover += (targetHover - hover) * 0.06;
+      speed += (targetSpeed - speed) * 0.25;
+      targetSpeed *= 0.86;
+
+      const elapsed = reduceQuery.matches ? 0 : (now - start) / 1000;
+
+      gl!.uniform1f(uTime, elapsed);
+      gl!.uniform2f(uPointer, pointerX, pointerY);
+      gl!.uniform1f(uHover, hover);
+      gl!.uniform1f(uSpeed, speed);
+      gl!.uniform1f(uDark, dark);
+      gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  initAmbient();
+</script>

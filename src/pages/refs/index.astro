@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
+import { getVisible } from '../../lib/content';
+import { KIND } from '../../site.config';
+
+const entries = await getVisible('refs');
+
+const groups = new Map<string, typeof entries>();
+for (const entry of entries) {
+  const key = entry.data.category ?? '未分类';
+  const bucket = groups.get(key);
+  if (bucket) bucket.push(entry);
+  else groups.set(key, [entry]);
+}
+const sorted = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0], 'zh-CN'));
+---
+
+<BaseLayout title={KIND.refs.label} titleKey="nav.refs" description={KIND.refs.desc}>
+  <section class="hero">
+    <p class="kind-kicker" data-kind="refs" data-i18n="kind.refs">{KIND.refs.label}</p>
+    <h1 data-i18n="kind.refs">{KIND.refs.label}</h1>
+    <p>
+      <span data-i18n="kind.refsDesc">{KIND.refs.desc}</span>
+      {' · '}
+      <span data-i18n="list.countItem" data-i18n-vars={String(entries.length)}>共 {entries.length} 条</span>
+    </p>
+  </section>
+
+  {
+    entries.length === 0 && <p class="empty" data-i18n="empty.refs">还没有素材。</p>
+  }
+
+  {
+    sorted.map(([category, items]) => (
+      <section>
+        <h2 class="group-title">{category}</h2>
+        <ul class="feed">
+          {items.map((entry) => (
+            <EntryRow entry={entry} kind="refs" />
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</BaseLayout>

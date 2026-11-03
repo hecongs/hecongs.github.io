@@ -1,0 +1,88 @@
+---
+import { EDUCATION, JOBS, SKILLS } from '../data/experience';
+---
+
+<ol class="timeline">
+  {
+    JOBS.map((job) => (
+      <li class={job.current ? 'current' : ''}>
+        <div class="tl-period">
+          {job.period}
+          {job.location && ` · ${job.location}`}
+        </div>
+        <h2 class="tl-title">{job.title}</h2>
+        <p class="tl-org">
+          {job.company}
+          {job.current && <em data-i18n="exp.current">（在职）</em>}
+        </p>
+        {job.summary && <p class="tl-summary">{job.summary}</p>}
+
+        <div class="tl-projects">
+          {job.projects.map((project) => (
+            <div class="tl-project">
+              <p class="tl-project-head">
+                <span class="tl-project-name">{project.name}</span>
+                {project.meta && <span class="tl-project-meta">{project.meta}</span>}
+              </p>
+              {project.summary && <p class="tl-project-summary">{project.summary}</p>}
+              <ul class="tl-points">
+                {project.points.map((point) => (
+                  <li>{point}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {
+          job.stack && (
+            <ul class="tl-stack">
+              {job.stack.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          )
+        }
+      </li>
+    ))
+  }
+</ol>
+
+<section class="section">
+  <div class="label-row">
+    <span class="label-pill" data-i18n="exp.edu">教育背景</span>
+  </div>
+  <ul class="timeline">
+    {
+      EDUCATION.map((item) => (
+        <li>
+          <div class="tl-period">
+            {item.period}
+            {item.location && ` · ${item.location}`}
+          </div>
+          <h2 class="tl-title">{item.school}</h2>
+          <p class="tl-org" data-i18n="exp.degree">{item.degree}</p>
+          {item.note && <p class="tl-summary">{item.note}</p>}
+        </li>
+      ))
+    }
+  </ul>
+</section>
+
+<section class="section">
+  <div class="label-row">
+    <span class="label-pill" data-i18n="exp.skills">技术栈</span>
+  </div>
+  <dl class="skill-groups">
+    {
+      SKILLS.map((group, index) => (
+        <div class="skill-group">
+          <dt data-i18n={['skill.lang', 'skill.sys', 'skill.ci', 'skill.proto', 'skill.io', 'skill.app'][index]}>
+            {group.group}
+          </dt>
+          <dd>{group.items.join(' · ')}</dd>
+        </div>
+      ))
+    }
+  </dl>
+</section>

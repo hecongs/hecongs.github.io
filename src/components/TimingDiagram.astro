@@ -1,0 +1,17 @@
+---
+import { renderTiming, type TimingSignal } from '../lib/timing';
+
+interface Props {
+  signals: TimingSignal[];
+  caption?: string;
+  step?: number;
+}
+
+const { signals, caption, step } = Astro.props;
+const svg = renderTiming(signals, { caption, step });
+---
+
+<figure class="timing-figure">
+  <div class="timing-scroll" set:html={svg} />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

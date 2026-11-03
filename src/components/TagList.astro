@@ -1,0 +1,22 @@
+---
+import { url } from '../lib/url';
+
+interface Props {
+  tags: string[];
+}
+
+const { tags } = Astro.props;
+const unique = [...new Set(tags)];
+---
+
+{
+  unique.length > 0 && (
+    <div class="tags">
+      {unique.map((tag) => (
+        <a class="tag" href={url(`tags/${encodeURIComponent(tag)}/`)}>
+          #{tag}
+        </a>
+      ))}
+    </div>
+  )
+}

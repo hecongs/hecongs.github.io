@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
+import { getVisible, type EntryLike } from '../../lib/content';
+import type { Kind } from '../../site.config';
+
+type Item = { entry: EntryLike; kind: Kind };
+
+export async function getStaticPaths() {
+  const [logs, posts, refs] = await Promise.all([
+    getVisible('log'),
+    getVisible('posts'),
+    getVisible('refs'),
+  ]);
+
+  const grouped = new Map<string, Item[]>();
+  const collect = (entries: EntryLike[], kind: Kind) => {
+    for (const entry of entries) {
+      for (const tag of entry.data.tags) {
+        const bucket = grouped.get(tag);
+        if (bucket) bucket.push({ entry, kind });
+        else grouped.set(tag, [{ entry, kind }]);
+      }
+    }
+  };
+  collect(logs, 'log');
+  collect(posts, 'posts');
+  collect(refs, 'refs');
+
+  return [...grouped.entries()].map(([tag, items]) => ({
+    params: { tag },
+    props: {
+      tag,
+      items: items.sort((a, b) => b.entry.data.date.valueOf() - a.entry.data.date.valueOf()),
+    },
+  }));
+}
+
+const { tag, items } = Astro.props;
+---
+
+<BaseLayout title={`#${tag}`} description={`标签 ${tag} 下的全部记录`}>
+  <section class="hero">
+    <h1>#{tag}</h1>
+    <p data-i18n="list.countItem" data-i18n-vars={String(items.length)}>共 {items.length} 条</p>
+  </section>
+
+  <ul class="feed" style="margin-top:18px">
+    {
+      items.map((item) => (
+        <EntryRow entry={item.entry} kind={item.kind} showKind />
+      ))
+    }
+  </ul>
+</BaseLayout>

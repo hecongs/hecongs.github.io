@@ -1,0 +1,152 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="搜索" titleKey="page.search" description="全文搜索">
+  <section class="hero">
+    <h1 data-i18n="page.search">搜索</h1>
+    <p data-i18n="search.desc">标题和正文全文检索，索引在构建时生成，纯前端运行。</p>
+  </section>
+
+  <div class="search-box">
+    <input id="q" type="search" data-i18n-placeholder="search.placeholder" placeholder="输入关键词，中文也可以" autocomplete="off" />
+  </div>
+  <p class="search-hint" id="hint" data-i18n="search.hint">输入关键词开始。</p>
+  <ul class="search-results" id="results"></ul>
+</BaseLayout>
+
+<script>
+  type SearchItem = {
+    url: string;
+    excerpt: string;
+    meta?: { title?: string };
+  };
+
+  const rawBase: string = import.meta.env.BASE_URL || '/';
+  const base = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+
+  let pagefindPromise: Promise<any> | null = null;
+  let composing = false;
+  let timer = 0;
+
+  function loadPagefind(): Promise<any> {
+    if (!pagefindPromise) {
+      pagefindPromise = import(/* @vite-ignore */ `${base}pagefind/pagefind.js`);
+    }
+    return pagefindPromise;
+  }
+
+  /**
+   * Pagefind 索引期按字符 n-gram 切中文，查询期用 Intl.Segmenter 切，
+   * 两边切法不一致会出现「搜完整词搜不到」。这里统一成单字 + 二元组。
+   */
+  function tokenize(text: string): string {
+    return text
+      .replace(/[\u3400-\u4dbf\u4e00-\u9fff]+/g, (run: string) => {
+        if (run.length < 2) return run;
+        const parts: string[] = [];
+        for (let i = 0; i < run.length; i += 1) {
+          parts.push(run[i]!);
+          if (i + 1 < run.length) parts.push(run.slice(i, i + 2));
+        }
+        return ` ${parts.join(' ')} `;
+      })
+      .trim();
+  }
+
+  function hrefFor(target: string): string {
+    const prefix = base.replace(/\/$/, '');
+    if (!prefix) return target;
+    if (target.startsWith(prefix)) return target;
+    return prefix + (target.startsWith('/') ? target : `/${target}`);
+  }
+
+  const t = (key: string, fallback: string, vars?: string) => {
+    const lang = document.documentElement.dataset.lang === 'en' ? 'en' : 'zh';
+    const table = (window as Window & { __ui?: Record<string, Record<string, string>> }).__ui;
+    const text = table?.[lang]?.[key] ?? fallback;
+    return vars ? text.replaceAll('{n}', vars) : text;
+  };
+
+  function render(list: HTMLElement, hint: HTMLElement, items: SearchItem[]): void {
+    if (!items.length) {
+      list.innerHTML = '';
+      hint.textContent = t('search.none', '没有找到相关记录。');
+      return;
+    }
+    hint.textContent = t('search.found', `${items.length} 条结果`, String(items.length));
+    list.innerHTML = items
+      .map((data) => {
+        const title = data.meta?.title ?? '（无标题）';
+        return `<li><div class="res-title"><a href="${hrefFor(data.url)}">${title}</a></div><p class="res-excerpt">${data.excerpt}</p></li>`;
+      })
+      .join('');
+  }
+
+  async function run(list: HTMLElement, hint: HTMLElement, query: string): Promise<void> {
+    if (!query) {
+      list.innerHTML = '';
+      hint.textContent = t('search.hint', '输入关键词开始。');
+      return;
+    }
+
+    let pagefind: any;
+    try {
+      pagefind = await loadPagefind();
+    } catch {
+      hint.textContent = t('search.unbuilt', '搜索索引还没生成：先执行 npm run build，再用 npm run preview 打开。');
+      return;
+    }
+
+    hint.textContent = t('search.loading', '检索中…');
+    try {
+      let result = await pagefind.search(tokenize(query));
+      if (!result.results.length) result = await pagefind.search(query);
+      const items: SearchItem[] = await Promise.all(
+        result.results
+          .slice(0, 30)
+          .map((item: { data: () => Promise<SearchItem> }) => item.data()),
+      );
+      render(list, hint, items);
+    } catch (error) {
+      hint.textContent = `检索失败：${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
+  function bindSearch(): void {
+    const input = document.getElementById('q');
+    const list = document.getElementById('results');
+    const hint = document.getElementById('hint');
+    if (!(input instanceof HTMLInputElement) || !(list instanceof HTMLElement) || !(hint instanceof HTMLElement)) return;
+    if (input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const schedule = () => {
+      if (composing) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        const value = input.value.trim();
+        const next = value ? `?q=${encodeURIComponent(value)}` : location.pathname;
+        history.replaceState(null, '', next);
+        void run(list, hint, value);
+      }, 220);
+    };
+
+    input.addEventListener('compositionstart', () => {
+      composing = true;
+    });
+    input.addEventListener('compositionend', () => {
+      composing = false;
+      schedule();
+    });
+    input.addEventListener('input', schedule);
+
+    const initial = new URLSearchParams(location.search).get('q');
+    if (initial) {
+      input.value = initial;
+      void run(list, hint, initial);
+    }
+  }
+
+  document.addEventListener('astro:page-load', bindSearch);
+</script>

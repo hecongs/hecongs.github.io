@@ -1,0 +1,56 @@
+---
+interface Field {
+  /** 单个位写 "7"，区间写 "6:4"（高位在前） */
+  bits: string;
+  name: string;
+  access?: string;
+  note?: string;
+}
+
+interface Props {
+  name?: string;
+  fields: Field[];
+  caption?: string;
+}
+
+const { name, fields, caption } = Astro.props;
+
+const parsed = fields
+  .map((field) => {
+    const parts = field.bits.split(':').map((part) => Number(part.trim()));
+    const high = parts[0] ?? 0;
+    const low = parts.length > 1 ? (parts[1] ?? high) : high;
+    return { ...field, high, low, span: Math.max(1, high - low + 1) };
+  })
+  .sort((a, b) => b.high - a.high);
+
+const tones = parsed.map((field, index) => ({ ...field, tone: index % 4 }));
+const label = (field: (typeof tones)[number]) =>
+  field.high === field.low ? `${field.low}` : `${field.high}:${field.low}`;
+---
+
+<figure class="bitfield">
+  {name && <div class="bitfield-title">{name}</div>}
+  <div class="bitfield-strip">
+    {
+      tones.map((field) => (
+        <div class={`bitfield-cell bf-${field.tone}`} style={`flex-grow:${field.span}`}>
+          <span class="bf-name">{field.name}</span>
+          <span class="bf-bits">{label(field)}</span>
+        </div>
+      ))
+    }
+  </div>
+  <ul class="bitfield-legend">
+    {
+      tones.map((field) => (
+        <li>
+          <code>{label(field)}</code> <strong>{field.name}</strong>
+          {field.access && <span class="badge">{field.access}</span>}
+          {field.note && <span> — {field.note}</span>}
+        </li>
+      ))
+    }
+  </ul>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
