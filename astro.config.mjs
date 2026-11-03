@@ -2,13 +2,12 @@ import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 
 // ── 部署前只改这两行 ───────────────────────────────────────────
-// 当前形态：项目仓库 HC-WBT/hecong.github.io
-//   站点地址 = https://hc-wbt.github.io/hecong.github.io/
-//   仓库名不是 <用户名>.github.io，所以 base 必须写 '/仓库名'
-// 换成用户主页仓库（HC-WBT.github.io）或自定义域名时，删掉 base 并把 site 改掉
+// 当前形态：用户主页仓库 hecongs/hecongs.github.io
+//   站点地址 = https://hecongs.github.io/
+//   仓库名与用户名一致，site 写根域名即可，**不要**设 base
+// 换自定义域名时只改 site，base 保持不存在
 export default defineConfig({
-  site: 'https://hc-wbt.github.io',
-  base: '/hecong.github.io',
+  site: 'https://hecongs.github.io',
 
   // Windows 上 Node 默认只把 dev server 绑到 IPv6 回环 [::1]，
   // 浏览器走 127.0.0.1 会连不上。显式绑 IPv4 回环，本机三种写法都能访问。
