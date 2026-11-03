@@ -5,7 +5,7 @@ import mdx from '@astrojs/mdx';
 // 1) 仓库名不是 <用户名>.github.io 时，base 必须写成 '/仓库名'
 // 2) 配了自定义域名就删掉 base，并把 site 改成你的域名
 export default defineConfig({
-  site: 'https://example.github.io',
+  site: 'https://hecong.github.io',
   // base: '/notebook',
 
   // Windows 上 Node 默认只把 dev server 绑到 IPv6 回环 [::1]，
