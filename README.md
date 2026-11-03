@@ -1,7 +1,7 @@
 # 何聪（个人记录站）
 
 Astro 7 + 纯静态。内容分三层：学习专栏、文章、素材。
-没有评论、没有订阅、没有后台。写作入口是 `src/content/` 下的 Markdown。日常怎么写，见 [写作要求.md](写作要求.md)。
+没有评论、没有订阅、没有后台。写作入口是 `src/content/` 下的 Markdown。日常写作规范见本地文件 `写作要求.md`（不随仓库发布）。
 
 ## 环境要求
 
@@ -59,7 +59,7 @@ src/
 
 ## 怎么写一条
 
-文件名、文首字段、正文和不要写的东西，以 [写作要求.md](写作要求.md) 为准。这里只留会让构建失败的三条：
+文件名、文首字段、正文和不要写的东西，以本地 `写作要求.md` 为准（该文件不随仓库发布）。这里只留会让构建失败的三条：
 
 - `date` 写成 `"2026-11-03"`，带引号。
 - 要出现在构建结果里，写 `draft: false`。不写就是草稿，`npm run dev` 仍能看到。
@@ -110,9 +110,11 @@ import Callout from '../../components/Callout.astro';
 
 ## 部署到 GitHub Pages
 
-完整步骤见 [DEPLOY.md](DEPLOY.md)：建仓库 → 改 `site` / `base` → 推送 → `Settings → Pages` 选 **GitHub Actions**，含排错表和自定义域名。
+线上地址 `https://hecongs.github.io/`，走 GitHub Actions 自动构建。
 
-三步摘要：公开仓库 → 改 `astro.config.mjs` 顶部两行 → push 到 `main` 自动构建发布。
+三步：公开仓库 → 改 `astro.config.mjs` 的 `site`（用户主页仓库不设 `base`）→ push 到 `main`，再到 `Settings → Pages` 把 Source 选为 **GitHub Actions**。
+
+完整的排错手册、自定义域名流程是本机文件 `DEPLOY.md`，不随仓库发布。
 
 > ⚠️ 免费账号的 Pages 只支持公开仓库，**私有仓库需要 GitHub Pro**。公开仓库 = 源码公开，`draft: true` 的草稿不会进构建产物，但 `.md` 原文件在仓库里能被看到。真正不想让人读的内容，别提交进这个仓库。
 

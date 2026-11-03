@@ -11,3 +11,7 @@ dist/
 .idea/
 .env
 .env.*
+
+# 只在本机使用的手册，不上传公开仓库
+DEPLOY.md
+写作要求.md
